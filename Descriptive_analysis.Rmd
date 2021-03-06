@@ -1,0 +1,157 @@
+---
+title: "Multiresidue analysis of pesticides in blood plasma using HF-LPME"
+author: "Martha Zuluaga"
+date: "2/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Environment
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(ggfortify)
+library(stats)
+library(reshape2)
+library(timeSeries)
+library(purrr)
+```
+
+2. Call the data 
+```{r}
+raw.data <- read.csv("Data/rawData_Optim.csv") %>% 
+  select(-1)
+treatments <- read.csv("Data/HFtreatments.csv")
+```
+
+3. Data description and acquisition
+This data comes from the GC/FID analysis performed to an extract of plasma samples based on the HF-LPME technique. 
+The plasma was spiked with diferent pesticides (most of them organochlorines), then a HF-LPME technique was applied to extract the pesticides from the plasma samples. 
+Other studies reported the variables that most influenced the extraction: Temperature, the velocity of stirring, time of extraction, and salt concentration (ref). Therefore, these variables were included in the experimental design.
+According to the literature review, the range used in each variable were: 
+Temperature: 20, 35, 50 ºC
+The velocity of stirring: 500, 750, 100 rpm
+Time of extraction: 5, 17.5, 30 min
+Salt concentration: 5, 12.5, 20 %p/p
+The variables were combined in a randomized block design.
+Each treatment was repeated three times.
+First we will make a descriptive analysis, and then we will find the best condition of extraction based on the variables measured. 
+
+3.1. Descriptive analysis. Data distribution
+```{r}
+
+raw.1 <- raw.data %>% 
+  select(-c(1:4))
+
+treat <- as.data.frame(treatments[, 1])
+colnames(treat) <- "treatment"
+raw.1 <- cbind(treat, raw.1)
+
+raw.melt <- melt(raw.1, id.vars= seq(1), measure.vars= seq(2, 12))
+head(raw.melt)
+```
+```{r}
+ggplot(raw.melt, aes(x = value, fill = variable)) + geom_density(alpha = 0.8) + xlim(-0.5, 2)
+```
+
+```{r}
+ggplot(raw.melt, aes(x = value, fill = treatment)) + geom_density(alpha = 0.8) + xlim(-0.5, 2)
+```
+Figures exhibit a non normal distribution and variance heterogeneity. For this we will transform and normalize the data.
+
+4. Data tidy and Normalization
+
+First we will summarize the positives and zero values. To determine a strategy for data transformation. 
+```{r}
+raw.data %>% 
+  summarize(pos = sum(.>0, na.rm = T),
+            zero = sum(. == 0, na.rm = T),
+            na = sum(is.na(.)))
+```
+As we have zeros into the data set we propose to transform the data based on the square root. Then, normalize and scale the data. For this we will use Pareto scale.
+
+4.1. Square root transformation
+```{r}
+sqr_data <- raw.data %>% 
+  select(-c(1:4)) %>% 
+  map_df(sqrt)
+```
+
+4.2. Function for centering and scaling
+```{r}
+center_colmeans <- function(x) {
+  xcenter = colMeans(x)
+  x - rep(xcenter, rep.int(nrow(x), ncol(x)))
+}
+center_colpareto <- function(x) {
+  xcenter = sqrt(colStdevs(x)) 
+  x / rep(xcenter, rep.int(nrow(x), ncol(x)))
+}
+
+df.center <- center_colmeans(sqr_data)
+Pareto.sqrt <- center_colpareto(df.center)
+```
+
+4.3. Data transformed visualization
+```{r}
+p_scale <- cbind(treat, Pareto.sqrt)
+
+p_melt <- melt(p_scale, id.vars= seq(1), measure.vars= seq(2, 12))
+
+ggplot(p_melt, aes(x = value, fill = variable)) + geom_density(alpha = 0.3, show.legend = TRUE) + xlim(-5, 5) 
+```
+
+5. Non-supervised analysis
+5.1. Principal comoponent analysis with raw data 
+```{r}
+df.pca <- raw.data[, 5:15]
+names(df.pca) <- c("Endosulfan", "Carbaryl", "Monocrotophos", "Carbofuran", "Lindane", "Aldrin", "Methyl.Parathion", "Dieldrin", "DDD", "DDT", "Endrin")
+
+autoplot(prcomp(df.pca), loadings = TRUE, loadings.colour = 'black',
+         loadings.label = TRUE, loadings.label.size = 5)
+
+```
+
+```{r}
+pca <- princomp(df.pca, center= TRUE, scale= TRUE)
+plot(pca, type="l")
+```
+
+
+```{r}
+summary(pca)
+```
+
+5.2. Principal comoponent analysis with transformed data
+
+```{r}
+df.pca <- p_scale[, 2:12]
+names(df.pca) <- c("Endosulfan", "Carbaryl", "Monocrotophos", "Carbofuran", "Lindane", "Aldrin", "Methyl.Parathion", "Dieldrin", "DDD", "DDT", "Endrin")
+
+autoplot(prcomp(df.pca), loadings = TRUE, loadings.colour = 'black',
+         loadings.label = TRUE, loadings.label.size = 5)
+```
+
+```{r}
+pca <- princomp(df.pca, center= TRUE, scale= TRUE)
+plot(pca, type="l")
+```
+
+```{r}
+summary(pca)
+```
+
+In the descriptive analysis, whether we use the transformed data or the raw data, we find that carbaryl and lindane have a different and opposite extraction behavior, which also differs with the behavior of the rest of pesticides.
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,91 @@
+---
+title: "Descriptive HFLPME"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# 1. Environment
+
+```{r}
+library(tidyverse)
+library(MVN)
+library(reshape2)
+library(timeSeries)
+```
+
+# 2. Call the data
+```{r}
+df <- read.csv("datos_optim.csv") 
+df <- df[c(1:81), c(1:15)]
+
+```
+
+```{r}
+df.norm <- df[, -c(1:4)]
+norm <- mvn(df.norm)
+norm
+```
+
+I'll use non parametric analysis for median comparison (Kruskal wallis and Wilcox post hoc)
+
+# Data tidy
+```{r}
+df.melt <- melt(df, id.vars = seq(1,4), measure.vars = seq(5, 15))
+ggplot(df.melt, aes(x= variable, y=value, fill = variable)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+```
+Transforming and scaling the data
+
+```{r}
+data.sqrt <- df %>% 
+  select(-c(1:4)) %>% 
+  map_df(sqrt)
+
+# Center
+center_colmeans <- function(x) {
+  xcenter = colMeans(x)
+  x - rep(xcenter, rep.int(nrow(x), ncol(x)))
+}
+
+
+# Autoscale
+center_colstd.dev <- function(x) {
+  xcenter = colStdevs(x)
+  x / rep(xcenter, rep.int(nrow(x), ncol(x)))
+}
+```
+
+
+```{r}
+df.center <- center_colmeans(data.sqrt)
+Autoscale.sqrt <- center_colstd.dev(df.center)
+metaData <- df[, c(1:4)]
+A.10 <- cbind(metaData, Autoscale.sqrt) 
+A.sqrt <- melt(A.10, id.vars = seq(1,4), measure.vars = seq(5, 15))
+
+ggplot(A.sqrt, aes(x= variable, y=value, fill = variable)) + geom_boxplot() + theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) + xlab("Pesticide") + ylab("Response")
+```
+
+
+```{r}
+A.norm <- A.10[, -c(1:4)]
+norm <- mvn(A.norm)
+norm
+```
+
+Non parametric Kruskal wallis test for median comparison and wilcox for multiple comparison
+
+Ho = the median in all responses are equal
+Ha = There are significant differences in the median of at least one response
+```{r}
+kruskal.test(variable ~ value, data = A.sqrt)
+```
+
+p value is greater than 0.05, thus there is not significant differences between the median of the pesticides concentration 
+
+
+
+
+
+

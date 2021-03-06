@@ -1,0 +1,1244 @@
+---
+title: "Response Surface Modeling HFLPME"
+author: "Martha Zuluaga"
+date: "10/18/2018"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+1. Environment
+```{r}
+library(rsm)
+library(tidyverse)
+```
+
+2. Generating a Box-Behnken design with 4 factors and 1 center points
+```{r}
+bbd(4, n0= 1, coding = list(x1 ~ (Temp -35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5), randomize = F)
+```
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim.csv")
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(ConcEndosulfan ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(ConcEndosulfan ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+#####################################################################################
+
+Alternative 2.
+I'll try the models with out one of the variables
+
+1. W/O salt concentration
+
+```{r}
+rsm_wo_salt <- rsm(ConcEndosulfan ~ Block + SO(x1,x2,x3), data = CData)
+summary(rsm_wo_salt)
+```
+
+2. W/O velocity of stirring
+
+```{r}
+rsm_wo_vstirr <- rsm(ConcEndosulfan ~ Block + SO(x1,x3,x4), data = CData)
+summary(rsm_wo_vstirr)
+        
+```
+
+3. W/O 
+
+```{r}
+rsm_wo_time <- rsm(ConcEndosulfan ~ Block + SO(x1,x2,x4), data = CData)
+summary(rsm_wo_time)
+```
+
+W/O Temperature
+```{r}
+rsm_wo_temp <- rsm(ConcEndosulfan ~ Block + SO(x2,x3,x4), data = CData)
+summary(rsm_wo_temp)
+```
+
+###########################
+Dieldrin optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim2.csv")
+data <- data[c(1:81), c(1:5,7) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Dieldrin ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Dieldrin ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+
+##################
+Aldrin optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,8) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Aldrin ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Aldrin ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+########################################
+
+Carbaril optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,9) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Carbaril. ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Carbaril. ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+
+Monocrotofos optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,10) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Monocrotofos ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Monocrotofos ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+######################
+Carbofuran optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,11) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Carbofuran ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Carbofuran ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+##########################
+Lindane optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,12) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Lindano ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Lindano ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+
+Methyl parathion optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,13) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Metil.paration. ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Metil.paration. ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+###########################
+
+DDD optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,14) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(DDD ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(DDD ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+
+DDT optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,15) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(DDT ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(DDT ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+######################
+Endrin optim
+
+
+3. Call the data
+The dataset was collected in three blocks
+The variables are 
+x1 ~ (Temp - 35)/15
+x2 ~ (StirrVel - 750)/250
+x3 ~ (TimeExt - 17.5)/12.5
+x4 ~ (salt - 12.5)/7.5
+
+3. Call the data
+```{r}
+data <- read.csv(file = "Data/Datos_optim4.csv")
+data <- data[c(1:81), c(1:5,16) ]
+data <- data[-45, c(1:6)]
+plot(data)
+```
+
+2. Data must be coded from -1 to +1
+```{r}
+CData <- coded.data(data, x1 ~ (Temp - 35)/15, x2 ~ (StirrVel - 750)/250, x3 ~ (TimeExt - 17.5)/12.5, x4 ~ (salt - 12.5)/7.5) 
+head(CData)
+```
+
+3. Fit a first order lineal model (ConcEndosulfan is the response)
+```{r}
+rsm1 <- rsm(Endrin ~ FO(x1,x2,x3,x4), data = CData, subset= (Block == 1))
+summary(rsm1)
+```
+
+The fit is not very good. I'll include the interaction term (TWI) and update the model.
+
+3.1. Interaction term
+```{r}
+rsm1.1 <- update(rsm1, .~. + TWI(x1, x2, x3, x4))
+summary(rsm1.1)
+```
+
+Fit is not very good also. I'll try a second order model. maybe it has a strong quadratic response with the peak near the center
+
+4. Second order model
+```{r}
+rsm2 <- rsm(Endrin ~ Block + SO(x1,x2,x3,x4), data = CData)
+summary(rsm2)
+```
+
+5. Contour Plots
+
+```{r}
+contour(rsm2, ~ x1 + x2, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+```{r}
+contour(rsm2, ~ x3 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x1 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x3, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+```{r}
+contour(rsm2, ~ x2 + x4, at = summary(rsm2)$canonical$xs, col = rainbow(50))
+```
+
+
+Graph perspective
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x2, at = xs, col = rainbow(50))
+```
+
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x3 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x3, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x1 + x4, at = xs, col = rainbow(50))
+```
+
+```{r}
+xs <- canonical(rsm2)$xs
+persp(rsm2, ~ x2 + x4, at = xs, col = rainbow(50))
+```
+
+
